@@ -48,7 +48,7 @@ Agregar la siguiente dependencia en el `pom.xml` del proyecto consumidor
 <dependency>
     <groupId>dev.notifications</groupId>
     <artifactId>notification-lib</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 </dependency>
 ```
 
@@ -273,13 +273,4 @@ agregar un canal nuevo no requiere modificarlo.
 - `./mvnw clean verify`: limpia, compila, ejecuta todas las pruebas y
   construye el artefacto.
 - `./mvnw install`: instala el artefacto en el repositorio Maven local.
-
 ---
-
-### Nota sobre los ejemplos de arquitectura
-
-El documento `docs/architecture.md` muestra un ejemplo ilustrativo del
-Builder con una firma simplificada. La firma real implementada en el código
-requiere tres argumentos en `addSender`: el identificador del proveedor, el
-tipo de notificación y el adaptador. Los ejemplos de este README reflejan la
-firma real.

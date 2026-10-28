@@ -305,9 +305,9 @@ API ilustrativa:
 
 ``` java
 NotificationClient client = NotificationConfiguration.builder()
-    .addSender("email-primary", new SimulatedEmailSender())
-    .addSender("sms-primary", new SimulatedSmsSender())
-    .addSender("push-primary", new SimulatedPushSender())
+    .addSender("email-primary", EmailNotification.class, new SimulatedEmailSender())
+    .addSender("sms-primary", SmsNotification.class, new SimulatedSmsSender())
+    .addSender("push-primary", PushNotification.class, new SimulatedPushSender())
     .defaultProvider(EmailNotification.class, "email-primary")
     .defaultProvider(SmsNotification.class, "sms-primary")
     .defaultProvider(PushNotification.class, "push-primary")
