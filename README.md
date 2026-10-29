@@ -48,7 +48,7 @@ Agregar la siguiente dependencia en el `pom.xml` del proyecto consumidor
 <dependency>
     <groupId>dev.notifications</groupId>
     <artifactId>notification-lib</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 
