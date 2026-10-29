@@ -1,6 +1,7 @@
 package dev.notifications.application;
 
 import dev.notifications.exception.NotificationConfigurationException;
+import dev.notifications.exception.NotificationSendingException;
 import dev.notifications.exception.NotificationValidationException;
 import dev.notifications.model.EmailNotification;
 import dev.notifications.model.NotificationResult;
@@ -56,7 +57,7 @@ class DefaultNotificationServiceTest {
     }
 
     @Test
-    void excepcionInesperadaDelAdaptadorSePropagaSinConvertir() {
+    void excepcionInesperadaDelAdaptadorSePropagaComoNotificationSendingException() {
         DefaultNotificationSenderRegistry registry = new DefaultNotificationSenderRegistry();
         registry.register("email-primary", EmailNotification.class,
                 new NotificationSender<EmailNotification>() {
@@ -77,8 +78,40 @@ class DefaultNotificationServiceTest {
 
         DefaultNotificationService servicio = new DefaultNotificationService(validator, registry);
 
-        assertThrows(IllegalStateException.class,
+        NotificationSendingException excepcion = assertThrows(NotificationSendingException.class,
                 () -> servicio.send(new EmailNotification("a@b.c", "Asunto", "Cuerpo")));
+
+        assertSame(IllegalStateException.class, excepcion.getCause().getClass());
+        assertEquals("red caida", excepcion.getCause().getMessage());
+    }
+
+    @Test
+    void excepcionInesperadaDelAdaptadorPreservaCausaOriginal() {
+        RuntimeException causa = new IllegalStateException("fallo de red");
+        DefaultNotificationSenderRegistry registry = new DefaultNotificationSenderRegistry();
+        registry.register("email-primary", EmailNotification.class,
+                new NotificationSender<EmailNotification>() {
+                    @Override
+                    public Class<EmailNotification> notificationType() {
+                        return EmailNotification.class;
+                    }
+
+                    @Override
+                    public NotificationResult send(EmailNotification notification) {
+                        throw causa;
+                    }
+                });
+        registry.setDefaultProvider(EmailNotification.class, "email-primary");
+
+        DefaultNotificationValidator validator = new DefaultNotificationValidator();
+        validator.register(new EmailNotificationValidator());
+
+        DefaultNotificationService servicio = new DefaultNotificationService(validator, registry);
+
+        NotificationSendingException excepcion = assertThrows(NotificationSendingException.class,
+                () -> servicio.send(new EmailNotification("a@b.c", "Asunto", "Cuerpo")));
+
+        assertSame(causa, excepcion.getCause());
     }
 
     @Test

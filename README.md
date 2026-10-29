@@ -240,7 +240,7 @@ errores inesperados se envuelven en `NotificationSendingException`.
   ni lectura por el destinatario.
 - No hay envío asíncrono, reintentos automáticos, envío por lotes, plantillas
   ni eventos de estado.
-- Slash queda fuera de la primera versión.
+- Slack queda fuera de la primera versión.
 - No se almacenan secretos, credenciales, tokens ni contenido sensible de
   notificaciones en el repositorio.
 - El repositorio no contiene un archivo de licencia definido todavía.

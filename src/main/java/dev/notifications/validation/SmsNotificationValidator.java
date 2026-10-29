@@ -29,9 +29,9 @@ public class SmsNotificationValidator implements NotificationValidator {
         if (sms.recipient() == null || sms.recipient().isBlank()) {
             throw new NotificationValidationException("El destinatario del SMS es obligatorio");
         }
-        if (!sms.recipient().matches("[\\d\\+\\s]+")) {
+        if (!sms.recipient().matches("^\\+?\\d[\\d\\s]*$")) {
             throw new NotificationValidationException(
-                    "El destinatario del SMS no tiene un formato razonable: " + sms.recipient());
+                    "El destinatario del SMS no tiene un formato razonable");
         }
         if (sms.message() == null || sms.message().isBlank()) {
             throw new NotificationValidationException("El mensaje del SMS es obligatorio");

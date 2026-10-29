@@ -48,4 +48,22 @@ class SmsNotificationValidatorTest {
         SmsNotification sms = new SmsNotification("+54-911-1234", "Mensaje");
         assertThrows(NotificationValidationException.class, () -> validator.validate(sms));
     }
+
+    @Test
+    void destinatarioSoloSignosMasLanzaExcepcion() {
+        SmsNotification sms = new SmsNotification("++", "Mensaje");
+        assertThrows(NotificationValidationException.class, () -> validator.validate(sms));
+    }
+
+    @Test
+    void destinatarioSignoMasEspacioSignoMasLanzaExcepcion() {
+        SmsNotification sms = new SmsNotification("+ +", "Mensaje");
+        assertThrows(NotificationValidationException.class, () -> validator.validate(sms));
+    }
+
+    @Test
+    void destinatarioSoloSignoMasLanzaExcepcion() {
+        SmsNotification sms = new SmsNotification("+", "Mensaje");
+        assertThrows(NotificationValidationException.class, () -> validator.validate(sms));
+    }
 }

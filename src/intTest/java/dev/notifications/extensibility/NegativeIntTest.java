@@ -5,6 +5,7 @@ import dev.notifications.adapter.email.SimulatedEmailSender;
 import dev.notifications.application.DefaultNotificationSenderRegistry;
 import dev.notifications.application.DefaultNotificationService;
 import dev.notifications.exception.NotificationConfigurationException;
+import dev.notifications.exception.NotificationSendingException;
 import dev.notifications.model.EmailNotification;
 import dev.notifications.model.NotificationResult;
 import dev.notifications.model.TestNotification;
@@ -88,8 +89,11 @@ class NegativeIntTest {
 
         DefaultNotificationService servicio = new DefaultNotificationService(validator, registry);
 
-        assertThrows(IllegalStateException.class,
+        NotificationSendingException excepcion = assertThrows(NotificationSendingException.class,
                 () -> servicio.send(new TestNotification("valido")));
+
+        assertSame(IllegalStateException.class, excepcion.getCause().getClass());
+        assertEquals("error inesperado", excepcion.getCause().getMessage());
     }
 
     @Test

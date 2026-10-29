@@ -10,6 +10,8 @@ import dev.notifications.port.NotificationSender;
  * <p>No realiza conexiones de red ni usa SDK de proveedores externos.
  * Devuelve un resultado {@code SENT} determinista con un identificador simulado
  * derivado del destinatario. No mantiene estado mutable ni modifica la notificación recibida.
+ * <p>Este adaptador simulado siempre devuelve un resultado {@code SENT}.
+ * Para probar escenarios {@code FAILED}, utilice un stub personalizado en lugar de este adaptador.
  */
 public class SimulatedPushSender implements NotificationSender<PushNotification> {
 

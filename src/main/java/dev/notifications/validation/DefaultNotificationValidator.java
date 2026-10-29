@@ -50,8 +50,7 @@ public class DefaultNotificationValidator implements NotificationValidator {
     public void validate(Notification notification) {
         Objects.requireNonNull(notification, "notification no puede ser nula");
 
-        @SuppressWarnings("unchecked")
-        Class<? extends Notification> type = (Class<? extends Notification>) notification.getClass();
+        Class<? extends Notification> type = notification.getClass();
 
         NotificationValidator validator = validatorsByType.get(type);
         if (validator == null) {

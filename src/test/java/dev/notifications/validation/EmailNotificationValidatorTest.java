@@ -44,6 +44,12 @@ class EmailNotificationValidatorTest {
     }
 
     @Test
+    void destinatarioArrobaSinParteLocalLanzaExcepcion() {
+        EmailNotification email = new EmailNotification("@dominio.com", "Asunto", "Cuerpo");
+        assertThrows(NotificationValidationException.class, () -> validator.validate(email));
+    }
+
+    @Test
     void asuntoVacioLanzaExcepcion() {
         EmailNotification email = new EmailNotification("a@b.c", "", "Cuerpo");
         assertThrows(NotificationValidationException.class, () -> validator.validate(email));

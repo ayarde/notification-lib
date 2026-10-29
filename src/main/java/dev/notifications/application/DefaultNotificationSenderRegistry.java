@@ -93,8 +93,7 @@ public class DefaultNotificationSenderRegistry implements NotificationSenderRegi
     public NotificationResult send(Notification notification) {
         Objects.requireNonNull(notification, "notification no puede ser nula");
 
-        @SuppressWarnings("unchecked")
-        Class<? extends Notification> type = (Class<? extends Notification>) notification.getClass();
+        Class<? extends Notification> type = notification.getClass();
 
         String providerId = defaultProviderByType.get(type);
         if (providerId == null) {

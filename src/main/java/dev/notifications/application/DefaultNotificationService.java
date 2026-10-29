@@ -1,6 +1,8 @@
 package dev.notifications.application;
 
 import dev.notifications.api.NotificationClient;
+import dev.notifications.exception.NotificationConfigurationException;
+import dev.notifications.exception.NotificationSendingException;
 import dev.notifications.model.Notification;
 import dev.notifications.model.NotificationResult;
 import dev.notifications.validation.NotificationValidator;
@@ -26,6 +28,13 @@ public class DefaultNotificationService implements NotificationClient {
     @Override
     public NotificationResult send(Notification notification) {
         validator.validate(notification);
-        return registry.send(notification);
+        try {
+            return registry.send(notification);
+        } catch (NotificationConfigurationException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new NotificationSendingException(
+                    "Error inesperado al enviar la notificación", e);
+        }
     }
 }

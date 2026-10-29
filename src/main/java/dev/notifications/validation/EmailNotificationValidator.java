@@ -29,9 +29,10 @@ public class EmailNotificationValidator implements NotificationValidator {
         if (email.recipient() == null || email.recipient().isBlank()) {
             throw new NotificationValidationException("El destinatario del email es obligatorio");
         }
-        if (!email.recipient().contains("@") || email.recipient().indexOf('@') == email.recipient().length() - 1) {
+        int arroba = email.recipient().indexOf('@');
+        if (arroba == -1 || arroba == 0 || arroba == email.recipient().length() - 1) {
             throw new NotificationValidationException(
-                    "El destinatario del email no tiene un formato razonable: " + email.recipient());
+                    "El destinatario del email no tiene un formato razonable");
         }
         if (email.subject() == null || email.subject().isBlank()) {
             throw new NotificationValidationException("El asunto del email es obligatorio");
