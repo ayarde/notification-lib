@@ -137,6 +137,31 @@ La implementación por defecto será `DefaultNotificationService`. Los
 detalles del registro y los adaptadores no forman parte de la API de uso
 habitual.
 
+### 5.1 API pública asíncrona
+
+``` java
+public interface AsyncNotificationClient {
+    CompletableFuture<NotificationResult> sendAsync(Notification notification);
+    CompletableFuture<List<NotificationResult>> sendBatchAsync(List<Notification> notifications);
+}
+```
+
+La API asíncrona es independiente de la API síncrona `NotificationClient`.
+Ambas pueden coexistir y usarse con la misma configuración.
+
+El envío asíncrono permite iniciar una operación sin bloquear al llamador.
+El consumidor proporciona un `Executor` donde se ejecutan las tareas de envío;
+la librería no crea ni cierra ejecutores propios.
+
+El envío por lotes (`sendBatchAsync`) envía múltiples notificaciones de forma
+independiente y devuelve los resultados en una lista que conserva el orden
+de las notificaciones de entrada. El lote no es atómico: cada notificación
+produce su propio resultado, y un fallo individual no impide procesar las
+demás notificaciones. Si el `Executor` rechaza una tarea, la notificación
+correspondente obtiene un resultado `FAILED` con código de error
+`ERROR_EXECUTOR_RECHAZADO` en su posición; los errores no capturados pueden
+producir una finalización excepcional del futuro del lote.
+
 ## 6. Puerto de salida y Strategy
 
 Contrato conceptual:
