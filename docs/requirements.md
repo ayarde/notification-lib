@@ -81,23 +81,88 @@ Incluye: - API síncrona. - Modelos específicos para Email, SMS y Push. -
 Servicio de aplicación. - Contrato de adaptador de envío. -
 Registro/resolución de adaptadores. - Validación. - Resultados y
 excepciones documentados. - Builder de configuración Java. - Adaptadores
-simulados para los tres canales. - Tests unitarios y un ejemplo de
-uso. - README.
+simulados para los tres canales. - Tests unitarios y un ejemplo de uso. -
+README. - Envío asíncrono mediante CompletableFuture. - Reintentos
+automáticos con política configurable. - Envío por lotes (no atómico:
+cada notificación produce su propio resultado, se preserva el orden de
+las notificaciones de entrada y se admiten resultados parciales).
 
-No incluye: - Integraciones reales con APIs externas. - Dependencias
-obligatorias de frameworks. - Envío asíncrono. - Reintentos
-automáticos. - Envío por lotes. - Templates. - Eventos de estado o
-Pub/Sub. - Slack. - Failover automático entre proveedores.
+No incluye: - Integraciones reales con APIs externas. -
+Dependencias obligatorias de frameworks. - Templates. - Eventos de
+estado o Pub/Sub. - Slack. - Failover automático entre proveedores.
 
 Estas exclusiones son intencionales para mantener una primera versión
 pequeña y verificable.
 
+## 3.1 Matriz de funcionalidades de la versión 1.1.0
+
+A continuación se diferencia qué está implementado, qué está implementado
+con adaptadores simulados, qué queda como opcional para etapas futuras
+y cuáles son las limitaciones conocidas.
+
+### Funcionalidades implementadas
+
+-   API común síncrona (`NotificationClient`) para Email, SMS y Push.
+-   Modelos específicos por canal (`EmailNotification`,
+    `SmsNotification`, `PushNotification`).
+-   Servicio de aplicación (`DefaultNotificationService`) con validación
+    antes del envío.
+-   Registro y resolución de adaptadores sin `switch` centralizado por
+    proveedor.
+-   Validación de notificaciones antes de invocar al adaptador: campos obligatorios no vacíos ni en blanco, y formato preliminar de email, teléfono y destino Push.
+-   Resultados (`NotificationResult`) y excepciones diferenciadas:
+    validación, configuración y envío.
+-   Builder de configuración mediante código Java, sin YAML ni
+    `.properties`.
+-   Varios proveedores por canal con selección del proveedor
+    predeterminado.
+-   Extensibilidad: nuevos canales sin modificar
+    `DefaultNotificationService`.
+-   Pruebas unitarias y de integración sin red ni credenciales.
+-   README con instalación, inicio rápido, configuración y ejemplos de uso.
+
+### Funcionalidades implementadas con adaptadores simulados
+
+-   Envío asíncrono mediante `CompletableFuture`
+    (`sendAsync` y `sendBatchAsync`).
+-   Reintentos automáticos con política configurable
+    (`FixedDelayRetryPolicy` y `RetryingNotificationClient`).
+-   Envío por lotes no atómico con resultados parciales y orden
+    preservado.
+
+Los adaptadores de Email, SMS y Push son simulados: no realizan
+conexiones de red ni usan SDK de proveedores externos. Devuelven
+resultados deterministas para permitir pruebas sin credenciales ni
+servicios reales.
+
+### Funcionalidades opcionales no implementadas (etapas futuras)
+
+-   Validación avanzada de formato (verificación de existencia real de direcciones de email, números telefónicos y tokens Push).
+-   Templates.
+-   Eventos de estado de notificación.
+-   Adaptadores reales para proveedores externos.
+-   Dockerfile para ejecutar demos.
+
+### Limitaciones conocidas
+
+-   La validación de formato implementada es preliminar: comprueba la estructura básica del destinatario pero no garantiza su existencia real ni la aceptación por el proveedor. Esa verificación corresponde al proveedor externo y queda fuera de la responsabilidad de la librería.
+-   `SENT` indica aceptación por el adaptador/proveedor; no garantiza
+    entrega ni lectura por el destinatario.
+-   Los adaptadores son simulados: no hay integraciones reales con
+    proveedores externos.
+-   Un reintento puede generar envíos duplicados si la respuesta de
+    aceptación se pierde antes de llegar al cliente; la librería no
+    implementa idempotencia para prevenir duplicados.
+-   El lote no es atómico: cada notificación se envía de forma
+    independiente; un fallo individual no impide procesar las demás.
+-   No hay plantillas ni eventos de estado.
+-   Slack queda fuera de la primera versión.
+-   No se almacenan secretos, credenciales, tokens ni contenido sensible
+    de notificaciones en el repositorio.
+
 ## 4. Requisitos opcionales para etapas futuras
 
--   Envío asíncrono mediante `CompletableFuture`.
--   Envío por lotes.
--   Política configurable de reintentos.
--   Validación específica de email, teléfono y destino Push.
+-   Validación avanzada de formato (verificación de existencia real de direcciones de email, números telefónicos y tokens Push).
 -   Templates.
 -   Eventos de estado de notificación.
 -   Adaptadores reales para proveedores.

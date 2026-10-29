@@ -20,7 +20,7 @@ class SimulatedPushSenderTest {
     }
 
     @Test
-    void sendDevuelveResultadoSentConIdSimulado() {
+    void sendDevuelveResultadoSentConIdSimuladoOpcio() {
         SimulatedPushSender sender = new SimulatedPushSender();
         PushNotification push = new PushNotification("token-dispositivo-123", "Título", "Cuerpo");
 
@@ -29,13 +29,29 @@ class SimulatedPushSenderTest {
         assertTrue(resultado.isSent());
         assertFalse(resultado.isFailed());
         assertEquals(NotificationStatus.SENT, resultado.status());
-        assertEquals("sim-push-token-dispositivo-123", resultado.providerMessageId());
+        assertNotNull(resultado.providerMessageId());
+        assertTrue(resultado.providerMessageId().startsWith("sim-push-"));
+        assertFalse(resultado.providerMessageId().contains("token-dispositivo-123"));
+        assertFalse(resultado.providerMessageId().contains("token-dispositivo"));
         assertNull(resultado.errorCode());
         assertNull(resultado.errorMessage());
     }
 
     @Test
-    void sendEsDeterministaMismoIdParaMismoDestinatario() {
+    void sendGeneraIdentificadorOpcioNoDerivadoDelDestinatario() {
+        SimulatedPushSender sender = new SimulatedPushSender();
+        String destinatario = "token-dispositivo-123";
+        PushNotification push = new PushNotification(destinatario, "Título", "Cuerpo");
+
+        NotificationResult resultado = sender.send(push);
+
+        assertNotNull(resultado.providerMessageId());
+        assertFalse(resultado.providerMessageId().contains(destinatario));
+        assertFalse(resultado.providerMessageId().contains("token-dispositivo"));
+    }
+
+    @Test
+    void sendGeneraIdsDiferentesParaCadaEnvio() {
         SimulatedPushSender sender = new SimulatedPushSender();
         PushNotification push1 = new PushNotification("tok-1", "Título 1", "Cuerpo 1");
         PushNotification push2 = new PushNotification("tok-1", "Título 2", "Cuerpo 2");
@@ -43,7 +59,9 @@ class SimulatedPushSenderTest {
         NotificationResult r1 = sender.send(push1);
         NotificationResult r2 = sender.send(push2);
 
-        assertEquals(r1.providerMessageId(), r2.providerMessageId());
+        assertNotEquals(r1.providerMessageId(), r2.providerMessageId());
+        assertTrue(r1.providerMessageId().startsWith("sim-push-"));
+        assertTrue(r2.providerMessageId().startsWith("sim-push-"));
     }
 
     @Test

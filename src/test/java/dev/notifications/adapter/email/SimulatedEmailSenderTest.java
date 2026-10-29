@@ -20,7 +20,7 @@ class SimulatedEmailSenderTest {
     }
 
     @Test
-    void sendDevuelveResultadoSentConIdSimulado() {
+    void sendDevuelveResultadoSentConIdSimuladoOpcio() {
         SimulatedEmailSender sender = new SimulatedEmailSender();
         EmailNotification email = new EmailNotification("usuario@example.com", "Asunto", "Cuerpo");
 
@@ -29,13 +29,29 @@ class SimulatedEmailSenderTest {
         assertTrue(resultado.isSent());
         assertFalse(resultado.isFailed());
         assertEquals(NotificationStatus.SENT, resultado.status());
-        assertEquals("sim-email-usuario@example.com", resultado.providerMessageId());
+        assertNotNull(resultado.providerMessageId());
+        assertTrue(resultado.providerMessageId().startsWith("sim-email-"));
+        assertFalse(resultado.providerMessageId().contains("usuario@example.com"));
         assertNull(resultado.errorCode());
         assertNull(resultado.errorMessage());
     }
 
     @Test
-    void sendEsDeterministaMismoIdParaMismoDestinatario() {
+    void sendGeneraIdentificadorOpcioNoDerivadoDelDestinatario() {
+        SimulatedEmailSender sender = new SimulatedEmailSender();
+        String destinatario = "usuario@example.com";
+        EmailNotification email = new EmailNotification(destinatario, "Asunto", "Cuerpo");
+
+        NotificationResult resultado = sender.send(email);
+
+        assertNotNull(resultado.providerMessageId());
+        assertFalse(resultado.providerMessageId().contains(destinatario));
+        assertFalse(resultado.providerMessageId().contains("usuario"));
+        assertFalse(resultado.providerMessageId().contains("example.com"));
+    }
+
+    @Test
+    void sendGeneraIdsDiferentesParaCadaEnvio() {
         SimulatedEmailSender sender = new SimulatedEmailSender();
         EmailNotification email1 = new EmailNotification("a@b.c", "Asunto 1", "Cuerpo 1");
         EmailNotification email2 = new EmailNotification("a@b.c", "Asunto 2", "Cuerpo 2");
@@ -43,7 +59,9 @@ class SimulatedEmailSenderTest {
         NotificationResult r1 = sender.send(email1);
         NotificationResult r2 = sender.send(email2);
 
-        assertEquals(r1.providerMessageId(), r2.providerMessageId());
+        assertNotEquals(r1.providerMessageId(), r2.providerMessageId());
+        assertTrue(r1.providerMessageId().startsWith("sim-email-"));
+        assertTrue(r2.providerMessageId().startsWith("sim-email-"));
     }
 
     @Test

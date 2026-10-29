@@ -45,6 +45,14 @@ class BatchAsyncIntTest {
                 .buildAsync();
     }
 
+    private static void assertIdOpcio(String id, String canal, String destinatario) {
+        assertNotNull(id);
+        assertTrue(id.startsWith("sim-" + canal + "-"),
+                "el identificador debe iniciar con sim-" + canal + "- pero fue: " + id);
+        assertFalse(id.contains(destinatario),
+                "el identificador no debe contener el destinatario pero fue: " + id);
+    }
+
     @Test
     void loteVacioConAdaptadoresSimuladosDevuelveListaVacia() {
         AsyncNotificationClient async = clienteAsyncConConfiguracionValida();
@@ -71,11 +79,11 @@ class BatchAsyncIntTest {
         List<NotificationResult> resultados = futuro.join();
         assertEquals(3, resultados.size());
         assertTrue(resultados.get(0).isSent());
-        assertEquals("sim-email-usuario@example.com", resultados.get(0).providerMessageId());
+        assertIdOpcio(resultados.get(0).providerMessageId(), "email", "usuario@example.com");
         assertTrue(resultados.get(1).isSent());
-        assertEquals("sim-sms-+5491112345678", resultados.get(1).providerMessageId());
+        assertIdOpcio(resultados.get(1).providerMessageId(), "sms", "+5491112345678");
         assertTrue(resultados.get(2).isSent());
-        assertEquals("sim-push-token-dispositivo-123", resultados.get(2).providerMessageId());
+        assertIdOpcio(resultados.get(2).providerMessageId(), "push", "token-dispositivo-123");
     }
 
     @Test
@@ -125,13 +133,13 @@ class BatchAsyncIntTest {
 
         // Verificar correspondencia posición por posición
         assertTrue(resultados.get(0).isSent());
-        assertEquals("sim-email-primero@test.c", resultados.get(0).providerMessageId());
+        assertIdOpcio(resultados.get(0).providerMessageId(), "email", "primero@test.c");
 
         assertTrue(resultados.get(1).isSent());
-        assertEquals("sim-sms-+5491112345678", resultados.get(1).providerMessageId());
+        assertIdOpcio(resultados.get(1).providerMessageId(), "sms", "+5491112345678");
 
         assertTrue(resultados.get(2).isSent());
-        assertEquals("sim-push-token-3", resultados.get(2).providerMessageId());
+        assertIdOpcio(resultados.get(2).providerMessageId(), "push", "token-3");
     }
 
     @Test

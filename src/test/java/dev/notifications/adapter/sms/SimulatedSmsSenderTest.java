@@ -20,7 +20,7 @@ class SimulatedSmsSenderTest {
     }
 
     @Test
-    void sendDevuelveResultadoSentConIdSimulado() {
+    void sendDevuelveResultadoSentConIdSimuladoOpcio() {
         SimulatedSmsSender sender = new SimulatedSmsSender();
         SmsNotification sms = new SmsNotification("+5491112345678", "Mensaje de prueba");
 
@@ -29,13 +29,29 @@ class SimulatedSmsSenderTest {
         assertTrue(resultado.isSent());
         assertFalse(resultado.isFailed());
         assertEquals(NotificationStatus.SENT, resultado.status());
-        assertEquals("sim-sms-+5491112345678", resultado.providerMessageId());
+        assertNotNull(resultado.providerMessageId());
+        assertTrue(resultado.providerMessageId().startsWith("sim-sms-"));
+        assertFalse(resultado.providerMessageId().contains("+5491112345678"));
+        assertFalse(resultado.providerMessageId().contains("5491112345678"));
         assertNull(resultado.errorCode());
         assertNull(resultado.errorMessage());
     }
 
     @Test
-    void sendEsDeterministaMismoIdParaMismoDestinatario() {
+    void sendGeneraIdentificadorOpcioNoDerivadoDelDestinatario() {
+        SimulatedSmsSender sender = new SimulatedSmsSender();
+        String destinatario = "+5491112345678";
+        SmsNotification sms = new SmsNotification(destinatario, "Mensaje de prueba");
+
+        NotificationResult resultado = sender.send(sms);
+
+        assertNotNull(resultado.providerMessageId());
+        assertFalse(resultado.providerMessageId().contains(destinatario));
+        assertFalse(resultado.providerMessageId().contains("5491112345678"));
+    }
+
+    @Test
+    void sendGeneraIdsDiferentesParaCadaEnvio() {
         SimulatedSmsSender sender = new SimulatedSmsSender();
         SmsNotification sms1 = new SmsNotification("+12345", "Mensaje 1");
         SmsNotification sms2 = new SmsNotification("+12345", "Mensaje 2");
@@ -43,7 +59,9 @@ class SimulatedSmsSenderTest {
         NotificationResult r1 = sender.send(sms1);
         NotificationResult r2 = sender.send(sms2);
 
-        assertEquals(r1.providerMessageId(), r2.providerMessageId());
+        assertNotEquals(r1.providerMessageId(), r2.providerMessageId());
+        assertTrue(r1.providerMessageId().startsWith("sim-sms-"));
+        assertTrue(r2.providerMessageId().startsWith("sim-sms-"));
     }
 
     @Test

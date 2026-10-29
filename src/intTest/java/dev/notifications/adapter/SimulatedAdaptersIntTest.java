@@ -42,6 +42,14 @@ class SimulatedAdaptersIntTest {
         return new DefaultNotificationService(validator, registry);
     }
 
+    private static void assertIdOpcio(String id, String canal, String destinatario) {
+        assertNotNull(id);
+        assertTrue(id.startsWith("sim-" + canal + "-"),
+                "el identificador debe iniciar con sim-" + canal + "- pero fue: " + id);
+        assertFalse(id.contains(destinatario),
+                "el identificador no debe contener el destinatario pero fue: " + id);
+    }
+
     @Test
     void envioEmailDespachaAlAdaptadorEmailYDevuelveResultado() {
         DefaultNotificationService servicio = servicioConTresAdaptadores();
@@ -50,7 +58,7 @@ class SimulatedAdaptersIntTest {
 
         assertTrue(resultado.isSent());
         assertFalse(resultado.isFailed());
-        assertEquals("sim-email-usuario@example.com", resultado.providerMessageId());
+        assertIdOpcio(resultado.providerMessageId(), "email", "usuario@example.com");
         assertNull(resultado.errorCode());
         assertNull(resultado.errorMessage());
     }
@@ -63,7 +71,7 @@ class SimulatedAdaptersIntTest {
 
         assertTrue(resultado.isSent());
         assertFalse(resultado.isFailed());
-        assertEquals("sim-sms-+5491112345678", resultado.providerMessageId());
+        assertIdOpcio(resultado.providerMessageId(), "sms", "+5491112345678");
         assertNull(resultado.errorCode());
         assertNull(resultado.errorMessage());
     }
@@ -76,7 +84,7 @@ class SimulatedAdaptersIntTest {
 
         assertTrue(resultado.isSent());
         assertFalse(resultado.isFailed());
-        assertEquals("sim-push-token-dispositivo-123", resultado.providerMessageId());
+        assertIdOpcio(resultado.providerMessageId(), "push", "token-dispositivo-123");
         assertNull(resultado.errorCode());
         assertNull(resultado.errorMessage());
     }
@@ -90,12 +98,12 @@ class SimulatedAdaptersIntTest {
         NotificationResult pushResultado = servicio.send(new PushNotification("tok", "Título", "Cuerpo"));
 
         assertTrue(emailResultado.isSent());
-        assertEquals("sim-email-a@b.c", emailResultado.providerMessageId());
+        assertIdOpcio(emailResultado.providerMessageId(), "email", "a@b.c");
 
         assertTrue(smsResultado.isSent());
-        assertEquals("sim-sms-+12345", smsResultado.providerMessageId());
+        assertIdOpcio(smsResultado.providerMessageId(), "sms", "+12345");
 
         assertTrue(pushResultado.isSent());
-        assertEquals("sim-push-tok", pushResultado.providerMessageId());
+        assertIdOpcio(pushResultado.providerMessageId(), "push", "tok");
     }
 }

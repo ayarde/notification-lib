@@ -19,7 +19,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -29,6 +28,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Pruebas unitarias de {@link DefaultAsyncNotificationService}.
+ *
+ * <p>Verifica el contrato de errores unificado entre {@code sendAsync} y
+ * {@code sendBatchAsync}: los errores de validaci\u00f3n, configuraci\u00f3n y
+ * env\u00edo devuelven un {@link NotificationResult} con estado {@code FAILED}
+ * y el futuro completa normalmente, sin lanzar excepci\u00f3n.
  */
 class DefaultAsyncNotificationServiceTest {
 
@@ -66,6 +70,8 @@ class DefaultAsyncNotificationServiceTest {
         return Runnable::run;
     }
 
+    // --- Envío individual ---
+
     @Test
     void envioAsyncExitosoCompletaConResultadoSent() {
         NotificationClient delegate = syncClientThatReturns(sentResult());
@@ -95,43 +101,63 @@ class DefaultAsyncNotificationServiceTest {
     }
 
     @Test
-    void excepcionValidacionCompletaFuturoExcepcionalmente() {
+    void errorValidacionCompletaFuturoNormalmenteConResultadoFallido() {
         NotificationClient delegate = syncClientThatThrowsValidation();
         AsyncNotificationClient async = new DefaultAsyncNotificationService(delegate, directExecutor());
 
         CompletableFuture<NotificationResult> futuro = async.sendAsync(
                 new EmailNotification("", "Asunto", "Cuerpo"));
 
-        CompletionException excepcion = assertThrows(CompletionException.class, futuro::join);
-        assertInstanceOf(NotificationValidationException.class, excepcion.getCause());
-        assertEquals("email inválido", excepcion.getCause().getMessage());
+        assertTrue(futuro.isDone(), "el futuro debe completarse normalmente");
+        NotificationResult resultado = futuro.join();
+        assertTrue(resultado.isFailed());
+        assertEquals("ERROR_VALIDACION", resultado.errorCode());
+        assertEquals("email inválido", resultado.errorMessage());
     }
 
     @Test
-    void excepcionConfiguracionCompletaFuturoExcepcionalmente() {
+    void errorConfiguracionCompletaFuturoNormalmenteConResultadoFallido() {
         NotificationClient delegate = syncClientThatThrowsConfig();
         AsyncNotificationClient async = new DefaultAsyncNotificationService(delegate, directExecutor());
 
         CompletableFuture<NotificationResult> futuro = async.sendAsync(
                 new EmailNotification("a@b.c", "Asunto", "Cuerpo"));
 
-        CompletionException excepcion = assertThrows(CompletionException.class, futuro::join);
-        assertInstanceOf(NotificationConfigurationException.class, excepcion.getCause());
-        assertEquals("proveedor no encontrado", excepcion.getCause().getMessage());
+        assertTrue(futuro.isDone(), "el futuro debe completarse normalmente");
+        NotificationResult resultado = futuro.join();
+        assertTrue(resultado.isFailed());
+        assertEquals("ERROR_CONFIGURACION", resultado.errorCode());
+        assertEquals("proveedor no encontrado", resultado.errorMessage());
     }
 
     @Test
-    void excepcionInesperadaSeEnvuelveEnNotificationSendingException() {
+    void errorInesperadoCompletaFuturoNormalmenteConResultadoFallido() {
         NotificationClient delegate = syncClientThatThrowsUnexpected();
         AsyncNotificationClient async = new DefaultAsyncNotificationService(delegate, directExecutor());
 
         CompletableFuture<NotificationResult> futuro = async.sendAsync(
                 new EmailNotification("a@b.c", "Asunto", "Cuerpo"));
 
-        CompletionException excepcion = assertThrows(CompletionException.class, futuro::join);
-        assertInstanceOf(NotificationSendingException.class, excepcion.getCause());
-        assertInstanceOf(IllegalStateException.class, excepcion.getCause().getCause());
-        assertEquals("red caída", excepcion.getCause().getCause().getMessage());
+        assertTrue(futuro.isDone(), "el futuro debe completarse normalmente");
+        NotificationResult resultado = futuro.join();
+        assertTrue(resultado.isFailed());
+        assertEquals("ERROR_ENVIO", resultado.errorCode());
+        assertEquals("red caída", resultado.errorMessage());
+    }
+
+    @Test
+    void excepcionInesperadaSeConvierteEnResultadoFallidoSinPerderCausa() {
+        NotificationClient delegate = notification -> {
+            throw new IllegalStateException("red caída");
+        };
+        AsyncNotificationClient async = new DefaultAsyncNotificationService(delegate, directExecutor());
+
+        NotificationResult resultado = async.sendAsync(
+                new EmailNotification("a@b.c", "Asunto", "Cuerpo")).join();
+
+        assertTrue(resultado.isFailed());
+        assertEquals("ERROR_ENVIO", resultado.errorCode());
+        assertEquals("red caída", resultado.errorMessage());
     }
 
     @Test
@@ -203,7 +229,7 @@ class DefaultAsyncNotificationServiceTest {
         assertInstanceOf(AsyncNotificationClient.class, async);
     }
 
-    // --- Pruebas de envío por lotes ---
+    // --- Envío por lotes ---
 
     @Test
     void loteVacioDevuelveListaVacia() {
@@ -322,13 +348,12 @@ class DefaultAsyncNotificationServiceTest {
     }
 
     @Test
-    void loteNotificacionInvalidaDevuelveResultadoFallidoEnPosicion() {
-        NotificationResult resultadoFallido = NotificationResult.failed("EC001", "proveedor no disponible");
+    void loteNotificacionInvalidaDevuelveResultadoFallidoValidacionEnPosicion() {
         NotificationClient delegate = notification -> {
             if (notification.recipient().equals("fallo@test.c")) {
                 throw new NotificationValidationException("email inválido");
             }
-            return resultadoFallido;
+            return sentResult();
         };
         AsyncNotificationClient async = new DefaultAsyncNotificationService(delegate, directExecutor());
 
@@ -341,10 +366,38 @@ class DefaultAsyncNotificationServiceTest {
 
         List<NotificationResult> resultados = futuro.join();
         assertEquals(2, resultados.size());
+        // Primera notificación: error de validación como resultado fallido, no excepción
         assertTrue(resultados.get(0).isFailed());
-        assertEquals("ERROR_ENVIO", resultados.get(0).errorCode());
+        assertEquals("ERROR_VALIDACION", resultados.get(0).errorCode());
+        assertEquals("email inválido", resultados.get(0).errorMessage());
+        // Segunda notificación: envío exitoso, orden preservado
+        assertTrue(resultados.get(1).isSent());
+        assertEquals("msg-async-ok", resultados.get(1).providerMessageId());
+    }
+
+    @Test
+    void loteErrorConfiguracionDevuelveResultadoFallidoConfiguracionEnPosicion() {
+        NotificationClient delegate = notification -> {
+            if (notification.recipient().equals("config@test.c")) {
+                throw new NotificationConfigurationException("proveedor ausente");
+            }
+            return sentResult();
+        };
+        AsyncNotificationClient async = new DefaultAsyncNotificationService(delegate, directExecutor());
+
+        List<Notification> notificaciones = List.of(
+                new EmailNotification("ok@test.c", "Asunto", "Cuerpo"),
+                new EmailNotification("config@test.c", "Asunto", "Cuerpo"));
+
+        CompletableFuture<List<NotificationResult>> futuro =
+                async.sendBatchAsync(notificaciones);
+
+        List<NotificationResult> resultados = futuro.join();
+        assertEquals(2, resultados.size());
+        assertTrue(resultados.get(0).isSent());
         assertTrue(resultados.get(1).isFailed());
-        assertEquals("EC001", resultados.get(1).errorCode());
+        assertEquals("ERROR_CONFIGURACION", resultados.get(1).errorCode());
+        assertEquals("proveedor ausente", resultados.get(1).errorMessage());
     }
 
     @Test

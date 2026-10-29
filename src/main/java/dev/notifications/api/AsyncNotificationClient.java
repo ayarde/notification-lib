@@ -15,11 +15,15 @@ import java.util.concurrent.CompletableFuture;
  * <p>Esta API es independiente de la API síncrona {@link NotificationClient}.
  * Ambas pueden coexistir: el cliente síncrono sigue funcionando sin cambios.
  *
- * <p>Los errores de validaci\u00f3n y configuraci\u00f3n completan el futuro
- * excepcionalmente (envueltos en {@link java.util.concurrent.CompletionException}
- * por el mecanismo est\u00e1ndar de {@link CompletableFuture}). Un resultado
- * {@link NotificationResult#failed(String, String)} completa el futuro normalmente
- * con el estado {@code FAILED}, sin lanzar excepci\u00f3n.
+ * <p>Contrato de errores: los errores de validaci\u00f3n, configuraci\u00f3n y env\u00edo
+ * no completan el futuro excepcionalmente. Se devuelve un
+ * {@link NotificationResult} con estado {@code FAILED} cuyo
+ * {@code errorCode} identifica el tipo de error ({@code ERROR_VALIDACION},
+ * {@code ERROR_CONFIGURACION} o {@code ERROR_ENVIO}) y cuyo {@code errorMessage}
+ * conserva el mensaje de la causa original. Un resultado {@code FAILED} completa
+ * el futuro normalmente, sin lanzar excepci\u00f3n. Solo los errores no
+ * capturados (por ejemplo, instancias de {@link Error}) pueden producir una
+ * finalizaci\u00f3n excepcional del futuro.
  */
 public interface AsyncNotificationClient {
 

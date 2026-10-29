@@ -34,7 +34,9 @@ class ExtensibilityIntTest {
 
         assertTrue(resultado.isSent());
         assertFalse(resultado.isFailed());
-        assertEquals("sim-test-destinatario-prueba", resultado.providerMessageId());
+        assertNotNull(resultado.providerMessageId());
+        assertTrue(resultado.providerMessageId().startsWith("sim-test-"));
+        assertFalse(resultado.providerMessageId().contains("destinatario-prueba"));
     }
 
     @Test

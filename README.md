@@ -295,9 +295,23 @@ System.out.println("Resultado: " + resultado.isSent());
 ```
 
 El API asíncrono es independiente del API síncrono (`NotificationClient`).
-Ambos pueden usarse con la misma configuración. Los errores de validación
-y configuración completan el futuro excepcionalmente; un resultado `FAILED`
-completa el futuro normalmente con el estado de fallo.
+Ambos pueden usarse con la misma configuración.
+
+Contrato de errores (coherente entre `sendAsync` y `sendBatchAsync`):
+los errores de validación, configuración y envío no completan el futuro
+excepcionalmente. Se devuelve un `NotificationResult` con estado `FAILED`
+cuyo `errorCode` identifica el tipo de error (`ERROR_VALIDACION`,
+`ERROR_CONFIGURACION` o `ERROR_ENVIO`) y cuyo `errorMessage` conserva el
+mensaje de la causa original. Un resultado `FAILED` completa el futuro
+normalmente, sin lanzar excepción. Solo los errores no capturados (por
+ejemplo, instancias de `Error`) pueden producir una finalización excepcional
+del futuro.
+
+Si el `Executor` rechaza la tarea de envío de `sendAsync`, la excepción
+`RejectedExecutionException` se propaga de forma síncrona antes de devolver
+el futuro. En `sendBatchAsync`, la notificación correspondiente obtiene un
+resultado `FAILED` con código `ERROR_EXECUTOR_RECHAZADO` y el lote continúa
+con las notificaciones restantes.
 
 Los reintentos configurables se componen con el envío asíncrono: si el cliente
 síncrono envuelto incluye una política de reintentos, los reintentos se

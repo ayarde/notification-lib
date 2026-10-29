@@ -162,6 +162,18 @@ correspondente obtiene un resultado `FAILED` con código de error
 `ERROR_EXECUTOR_RECHAZADO` en su posición; los errores no capturados pueden
 producir una finalización excepcional del futuro del lote.
 
+Contrato de errores (coherente entre `sendAsync` y `sendBatchAsync`): los
+errores de validación (`NotificationValidationException`), configuración
+(`NotificationConfigurationException`) y envío (errores inesperados de
+tiempo de ejecución) no completan el futuro excepcionalmente. Se devuelve
+un `NotificationResult` con estado `FAILED` cuyo `errorCode` identifica el
+tipo de error (`ERROR_VALIDACION`, `ERROR_CONFIGURACION` o `ERROR_ENVIO`)
+y cuyo `errorMessage` conserva el mensaje de la causa original. Solo los
+errores no capturados (por ejemplo, instancias de `Error`) pueden producir
+una finalización excepcional del futuro. En `sendAsync`, si el `Executor`
+rechaza la tarea, la excepción `RejectedExecutionException` se propaga de
+forma síncrona antes de devolver el futuro.
+
 ## 6. Puerto de salida y Strategy
 
 Contrato conceptual:
@@ -388,11 +400,15 @@ la ejecución simulada no requiere red.
 
 ## 16. Extensiones futuras
 
-No forman parte del núcleo de la primera entrega: - `CompletableFuture`
-y envío asíncrono. - Reintentos con backoff y clasificación de fallos. -
-Idempotencia y prevención de duplicados. - Envío por lotes. -
-Templates. - Eventos de estado. - Slack. - Integraciones reales con
-proveedores. - Módulos Maven separados para SDK opcionales.
+No forman parte del núcleo de la primera entrega: - Idempotencia y
+prevención de duplicados. - Templates. - Eventos de estado. - Slack. -
+Integraciones reales con proveedores. - Módulos Maven separados para SDK
+opcionales.
+
+El envío asíncrono (`CompletableFuture`), los reintentos automáticos con
+política configurable y el envío por lotes ya están implementados en la
+primera entrega con adaptadores simulados; se documentan en
+`architecture.md` (sección 5.1) y en `README.md`.
 
 Antes de implementar una extensión, definir su contrato, semántica de
 errores, pruebas y compatibilidad con la API pública.

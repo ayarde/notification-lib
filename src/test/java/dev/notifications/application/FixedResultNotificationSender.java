@@ -8,11 +8,11 @@ import dev.notifications.port.NotificationSender;
 /**
  * Remitente simulado para pruebas de la Etapa 3. No realiza conexiones de red.
  */
-public class TestNotificationSender implements NotificationSender<Notification> {
+public class FixedResultNotificationSender implements NotificationSender<Notification> {
 
     private final NotificationResult result;
 
-    public TestNotificationSender(NotificationResult result) {
+    public FixedResultNotificationSender(NotificationResult result) {
         this.result = result;
     }
 

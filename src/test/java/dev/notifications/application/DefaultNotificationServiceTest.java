@@ -22,7 +22,7 @@ class DefaultNotificationServiceTest {
     private DefaultNotificationService servicioConAdaptador(NotificationResult resultado) {
         DefaultNotificationSenderRegistry registry = new DefaultNotificationSenderRegistry();
         registry.register("email-primary", EmailNotification.class,
-                new TestNotificationSender(resultado));
+                new FixedResultNotificationSender(resultado));
         registry.setDefaultProvider(EmailNotification.class, "email-primary");
 
         DefaultNotificationValidator validator = new DefaultNotificationValidator();
@@ -148,7 +148,7 @@ class DefaultNotificationServiceTest {
     void proveedorPredeterminadoInexistenteGeneraErrorDeConfiguracion() {
         DefaultNotificationSenderRegistry registry = new DefaultNotificationSenderRegistry();
         registry.register("email-primary", EmailNotification.class,
-                new TestNotificationSender(NotificationResult.sent()));
+                new FixedResultNotificationSender(NotificationResult.sent()));
         // No se llama a setDefaultProvider; no hay default configurado.
 
         DefaultNotificationValidator validator = new DefaultNotificationValidator();
@@ -164,7 +164,7 @@ class DefaultNotificationServiceTest {
     void proveedorPredeterminadoIncompatibleGeneraErrorDeConfiguracion() {
         DefaultNotificationSenderRegistry registry = new DefaultNotificationSenderRegistry();
         registry.register("sms-primary", SmsNotification.class,
-                new TestNotificationSender(NotificationResult.sent()));
+                new FixedResultNotificationSender(NotificationResult.sent()));
 
         assertThrows(NotificationConfigurationException.class,
                 () -> registry.setDefaultProvider(EmailNotification.class, "sms-primary"));
@@ -174,7 +174,7 @@ class DefaultNotificationServiceTest {
     void notificacionNulaLanzaExcepcion() {
         DefaultNotificationSenderRegistry registry = new DefaultNotificationSenderRegistry();
         registry.register("email-primary", EmailNotification.class,
-                new TestNotificationSender(NotificationResult.sent()));
+                new FixedResultNotificationSender(NotificationResult.sent()));
         registry.setDefaultProvider(EmailNotification.class, "email-primary");
 
         DefaultNotificationValidator validator = new DefaultNotificationValidator();

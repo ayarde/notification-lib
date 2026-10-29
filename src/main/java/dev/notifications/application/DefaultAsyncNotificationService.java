@@ -33,10 +33,27 @@ import java.util.concurrent.RejectedExecutionException;
  * dev.notifications.retry.RetryingNotificationClient}, los reintentos se
  * ejecutan en el hilo del ejecutor, sin bloquear al llamador.
  *
+ * <p>Contrato de errores (coherente entre {@link #sendAsync} y
+ * {@link #sendBatchAsync}): los errores de validación, configuración y envío
+ * no completan el futuro excepcionalmente. Se devuelve un
+ * {@link NotificationResult} con estado {@code FAILED} cuyo
+ * {@code errorCode} identifica el tipo de error y cuyo {@code errorMessage}
+ * conserva el mensaje de la causa original:
+ * <ul>
+ *   <li>{@code ERROR_VALIDACION}: {@link NotificationValidationException}.</li>
+ *   <li>{@code ERROR_CONFIGURACION}: {@link NotificationConfigurationException}.</li>
+ *   <li>{@code ERROR_ENVIO}: {@link NotificationSendingException} u otra
+ *       excepción inesperada de tiempo de ejecución.</li>
+ * </ul>
+ * Solo los errores no capturados (por ejemplo, instancias de {@link Error})
+ * pueden producir una finalización excepcional del futuro.
+ *
  * <p>Si el ejecutor rechaza la tarea, {@link
  * java.util.concurrent.RejectedExecutionException} se propaga de forma
  * síncrona desde {@link #sendAsync(Notification)} antes de que se devuelva el
- * futuro.
+ * futuro. En {@link #sendBatchAsync(List)} la notificación correspondiente
+ * obtiene un resultado {@code FAILED} con código
+ * {@code ERROR_EXECUTOR_RECHAZADO} y el lote continúa con las restantes.
  *
  * <p>Cancelar el {@link CompletableFuture} devuelto no detiene necesariamente
  * una operación de envío que ya comenzó en el adaptador.
@@ -45,9 +62,15 @@ import java.util.concurrent.RejectedExecutionException;
  * Cada notificación del lote se envía de forma independiente usando el mismo
  * {@link Executor}. Los resultados individuales se ordenan según la posición
  * de la notificación de entrada, independientemente del orden de finalización
- * de las tareas.
+ * de las tareas. El lote no es atómico: un fallo individual no impide
+ * procesar las demás notificaciones.
  */
 public class DefaultAsyncNotificationService implements AsyncNotificationClient {
+
+    private static final String ERROR_VALIDACION = "ERROR_VALIDACION";
+    private static final String ERROR_CONFIGURACION = "ERROR_CONFIGURACION";
+    private static final String ERROR_ENVIO = "ERROR_ENVIO";
+    private static final String ERROR_EXECUTOR_RECHAZADO = "ERROR_EXECUTOR_RECHAZADO";
 
     private final NotificationClient delegate;
     private final Executor executor;
@@ -68,16 +91,34 @@ public class DefaultAsyncNotificationService implements AsyncNotificationClient 
     public CompletableFuture<NotificationResult> sendAsync(Notification notification) {
         Objects.requireNonNull(notification, "notification no puede ser nula");
 
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                return delegate.send(notification);
-            } catch (NotificationValidationException | NotificationConfigurationException e) {
-                throw e;
-            } catch (RuntimeException e) {
-                throw new NotificationSendingException(
-                        "Error inesperado al enviar la notificación de forma asíncrona", e);
-            }
-        }, executor);
+        return CompletableFuture.supplyAsync(() -> enviarResultado(notification), executor);
+    }
+
+    /**
+     * Envía una notificación y devuelve un resultado, convirtiendo cualquier
+     * error controlado en un resultado {@code FAILED} sin completar el futuro
+     * excepcionalmente.
+     */
+    private NotificationResult enviarResultado(Notification notification) {
+        try {
+            return delegate.send(notification);
+        } catch (NotificationValidationException e) {
+            return fallido(ERROR_VALIDACION, e);
+        } catch (NotificationConfigurationException e) {
+            return fallido(ERROR_CONFIGURACION, e);
+        } catch (NotificationSendingException e) {
+            return fallido(ERROR_ENVIO, e);
+        } catch (RuntimeException e) {
+            return fallido(ERROR_ENVIO, e);
+        }
+    }
+
+    private static NotificationResult fallido(String codigo, Throwable causa) {
+        String mensaje = causa.getMessage();
+        if (mensaje == null || mensaje.isBlank()) {
+            mensaje = "Error al enviar la notificación";
+        }
+        return NotificationResult.failed(codigo, mensaje);
     }
 
     @Override
@@ -98,31 +139,14 @@ public class DefaultAsyncNotificationService implements AsyncNotificationClient 
         for (Notification notification : notifications) {
             CompletableFuture<NotificationResult> future;
             try {
-                future = CompletableFuture.supplyAsync(() -> {
-                    try {
-                        return delegate.send(notification);
-                    } catch (NotificationValidationException | NotificationConfigurationException
-                             | NotificationSendingException e) {
-                        String mensaje = e.getMessage();
-                        if (mensaje == null || mensaje.isBlank()) {
-                            mensaje = "Error al enviar la notificación";
-                        }
-                        return NotificationResult.failed("ERROR_ENVIO", mensaje);
-                    } catch (RuntimeException e) {
-                        String mensaje = e.getMessage();
-                        if (mensaje == null || mensaje.isBlank()) {
-                            mensaje = "Error inesperado al enviar la notificación";
-                        }
-                        return NotificationResult.failed("ERROR_ENVIO", mensaje);
-                    }
-                }, executor);
+                future = CompletableFuture.supplyAsync(() -> enviarResultado(notification), executor);
             } catch (RejectedExecutionException e) {
                 String mensaje = e.getMessage();
                 if (mensaje == null || mensaje.isBlank()) {
                     mensaje = "El executor rechazó la tarea de envío";
                 }
                 future = CompletableFuture.completedFuture(
-                        NotificationResult.failed("ERROR_EXECUTOR_RECHAZADO", mensaje));
+                        NotificationResult.failed(ERROR_EXECUTOR_RECHAZADO, mensaje));
             }
             futures.add(future);
         }
